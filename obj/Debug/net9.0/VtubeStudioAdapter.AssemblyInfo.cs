@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("VtubeStudioAdapter")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+70bc9da5983b2e4c4c60e1b52779c883f98d6a3a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6af5565f912add329d13a295715604281f735cb5")]
 [assembly: System.Reflection.AssemblyProductAttribute("VtubeStudioAdapter")]
 [assembly: System.Reflection.AssemblyTitleAttribute("VtubeStudioAdapter")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -34,6 +34,8 @@ public class GetCurrentModelQuery : IRequest<VTSData>
 
     public ModelPosition? ModelPosition { get; set; }
 
+    public required Action<VTSData> OnCompleted { get; set; }
+
     public static implicit operator VTSData(GetCurrentModelQuery model)
     {
         var map = new Mapper(new MapperConfiguration(cfg =>

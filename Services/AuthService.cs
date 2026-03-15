@@ -2,36 +2,37 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
-using System.Net.WebSockets;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using VtubeStudioAdapter.Commands.Auth;
 using VtubeStudioAdapter.Models;
+using WebSocketSharp;
 
+using WebSocket = WebSocketSharp.WebSocket;
 namespace VtubeStudioAdapter
 {
     public class AuthService
     {
 
-        private ClientWebSocket _client;
-
-        private CancellationTokenSource _cts;
+        private WebSocket _client;
 
         private ILogger _logger;
 
+        private Action<VTSData>? _globalAction;
 
-        public AuthService(ClientWebSocket socket, CancellationTokenSource cts, ILogger<AuthService> logger)
+        public AuthService(WebSocket socket, ILogger<AuthService> logger)
         {
             _logger = logger;
-            _cts = cts;
             _client = socket;
-
-            _client.ConnectAsync(new Uri(ConstStorage.vtube_studio_uri), _cts.Token);
+            _client.Connect();
+            _client.OnMessage += OnComleted;
         }
-        public async Task<VTSData> AuthApp(VTSData data)
+        public async Task<VTSData> AuthApp(AuthQuery query)
         {
+            var data = (VTSData)query;
             _logger.LogInformation("Entering {Method}", nameof(AuthApp));
             const string Request = "AuthenticationTokenRequest";
 
@@ -43,63 +44,14 @@ namespace VtubeStudioAdapter
 
             var buffer = Encoding.UTF8.GetBytes(json);
 
-            await _client.SendAsync(
-             new ArraySegment<byte>(buffer),
-             WebSocketMessageType.Text,
-             true,
-             _cts.Token
-            );
+            _client.Send(buffer);
+
+
+            _globalAction = query.OnCompleted!;
+
             _logger.LogInformation("Exiting {Method}", nameof(AuthApp));
-            return await Auth();
-        }
-        private async Task<VTSData> Auth()
-        {
-            _logger.LogInformation("Entering {Method}", nameof(Auth));
-            var buffer = new byte[1024];
-            WebSocketReceiveResult? result = null;
-            VTSData? data = null;
-            do
-            {
-                result = await _client.ReceiveAsync(
-                    new ArraySegment<byte>(buffer),
-                    CancellationToken.None
-                );
-                if (result.MessageType == WebSocketMessageType.Text)
-                {
-                    if (result.EndOfMessage)
-                    {
-                        string json = Encoding.UTF8.GetString(buffer, 0, result.Count);
 
-                        var obj = JsonConvert.DeserializeObject<VtubeStudioModel>(json) ?? throw new NullReferenceException("Recive obj was null");
-
-                        if (obj.Data is null)
-                        {
-                            _logger.LogError($"[{DateTime.UtcNow}]: data in {obj} was null");
-
-                            await _client.CloseAsync(
-                            WebSocketCloseStatus.NormalClosure,
-                            "Закрыто из-за ошибки",
-                            _cts.Token
-                            );
-
-                            _cts.Cancel();
-
-                            return null;
-                        }
-
-                        var token = obj.Data.AuthToken;
-
-                        if (obj.Data.ErrorID is not null)
-                        {
-                            _logger.LogWarning($"[{DateTime.UtcNow}]: Vtube studio return error: {obj.Data.ErrorID} {obj.Data.Message} ");
-                        }
-                        data = obj.Data;
-                    }
-                }
-            } while (result is null && !result.CloseStatus.HasValue);
-            _logger.LogInformation("Exiting {Method}", nameof(Auth));
             return data;
-
         }
         public async void AuthWithToken(string token, string pluginName, string pluginDeveloper)
         {
@@ -119,14 +71,45 @@ namespace VtubeStudioAdapter
 
             var buffer = Encoding.UTF8.GetBytes(json);
 
-            await _client.SendAsync(
-             new ArraySegment<byte>(buffer),
-             WebSocketMessageType.Text,
-             true,
-             _cts.Token
-            );
-            await Auth();
+            _client.Send(buffer);
+
             _logger.LogInformation("Exiting {Method}", nameof(AuthWithToken));
+
+        }
+
+        private async void OnComleted(object? sender, MessageEventArgs e)
+        {
+            var data = await WorkWithJson(e.Data);
+
+            if (data is null)
+            {
+                _logger.LogWarning($"[{DateTime.UtcNow}]: data was null");
+            }
+
+            _globalAction(data!);
+
+            _client.OnMessage -= OnComleted;
+            _globalAction = null;
+
+        }
+
+        private async Task<VTSData?> WorkWithJson(string json)
+        {
+            var obj = JsonConvert.DeserializeObject<VtubeStudioModel>(json) ?? throw new NullReferenceException("Recive obj was null");
+
+            if (obj.Data is null)
+            {
+                _logger.LogError($"[{DateTime.UtcNow}]: data in {obj} was null");
+                return null;
+            }
+
+            var token = obj.Data.AuthToken;
+
+            if (obj.Data.ErrorID is not null)
+            {
+                _logger.LogWarning($"[{DateTime.UtcNow}]: Vtube studio return error: {obj.Data.ErrorID} {obj.Data.Message} ");
+            }
+            return obj.Data;
         }
         private string Base64(string? path)
         {

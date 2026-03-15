@@ -21,6 +21,8 @@ namespace VtubeStudioAdapter.Commands.PropertyModel.Movement
 
         public string[]? ArtMeshTags { get; set; }
 
+        public required Action<VTSData> OnCompleted { get; set; }
+
         public static implicit operator VTSData(ArtMeshModelQuery model)
         {
             var map = new Mapper(new MapperConfiguration(cfg =>

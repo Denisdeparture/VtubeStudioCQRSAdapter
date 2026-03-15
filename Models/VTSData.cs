@@ -21,15 +21,11 @@ namespace VtubeStudioAdapter.Models
         [JsonProperty("active")]
         public bool? Active { get; set; }
 
-        [JsonProperty("port")]
-        public int? Port { get; set; }
+        [JsonProperty("vTubeStudioVersion")]
+        public string VTubeStudioVersion { get; set; }
 
-        [JsonProperty("instanceID")]
-        public string? InstanceID { get; set; }
-
-        [JsonProperty("windowTitle")]
-        public string? WindowTitle { get; set; }
-        [JsonProperty("strengthOverrides")]
+        [JsonProperty("currentSessionAuthenticated")]
+        public bool CurrentSessionAuthenticated { get; set; }
         public PhysicParamter[]? Strength { get; set; }
         [JsonProperty("windOverrides")]
         public PhysicParamter[]? Wind { get; set; }
@@ -107,9 +103,9 @@ namespace VtubeStudioAdapter.Models
         [JsonProperty("artMeshTags")]
         public string[]? ArtMeshTags { get; set; }
         [JsonProperty("customParameters")]
-        public ArtMeshParameter? CustomParametrs { get; set; }
+        public List<ArtMeshParameter>? CustomParametrs { get; set; }
         [JsonProperty("defaultParameters")]
-        public ArtMeshParameter? DefaultParametrs { get; set; }
+        public List<ArtMeshParameter>? DefaultParametrs { get; set; }
         public class ArtMeshParameter
         {
             [JsonProperty("name")]
@@ -122,13 +118,13 @@ namespace VtubeStudioAdapter.Models
             public double? Value { get; set; }
 
             [JsonProperty("min")]
-            public int? Min { get; set; }
+            public string? Min { get; set; }
 
             [JsonProperty("max")]
-            public int? Max { get; set; }
+            public string? Max { get; set; }
 
             [JsonProperty("defaultValue")]
-            public int? DefaultValue { get; set; }
+            public string? DefaultValue { get; set; }
         }
         [JsonProperty("parameterValues")]
         public Parametr[]? ParameterValues;

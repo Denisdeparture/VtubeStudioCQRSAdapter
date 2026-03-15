@@ -14,7 +14,7 @@ namespace VtubeStudioAdapter.Handlers
         public async Task<VTSData> Handle(GetPhysicsQuery request, CancellationToken cancellationToken)
         {
             logger.LogInformation("Entering {Handler} with request {RequestType}", nameof(GetPhysicsHandler), typeof(GetPhysicsQuery).Name);
-            var result = await physicsService.GetPhysicsParametrs();
+            var result = await physicsService.GetPhysicsParametrs(request);
             logger.LogInformation("Exiting {Handler}", nameof(GetPhysicsHandler));
             return result;
         }

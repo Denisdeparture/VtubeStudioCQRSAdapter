@@ -13,7 +13,7 @@ namespace VtubeStudioAdapter.Handlers
         public async Task<VTSData> Handle(StatusVTSModelQuery request, CancellationToken cancellationToken)
         {
             logger.LogInformation("Entering {Handler} with request {RequestType}", nameof(StatusHandler), typeof(StatusVTSModelQuery).Name);
-            var result = await statusService.GetCurrentStatus();
+            var result = await statusService.GetCurrentStatus(request);
             logger.LogInformation("Exiting {Handler}", nameof(StatusHandler));
             return result;
         }

@@ -30,6 +30,8 @@ namespace VtubeStudioAdapter.Commands.PropertyModel.Physics
         public string? ApiPhysicsOverridePluginName { get; set; }
         public List<PhysicsGroup>? PhysicsGroups { get; set; }
 
+        public required Action<VTSData> OnCompleted { get; set; }
+
         public static implicit operator VTSData(GetPhysicsQuery model)
         {
             var map = new Mapper(new MapperConfiguration(cfg =>

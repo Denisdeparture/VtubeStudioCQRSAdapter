@@ -17,6 +17,8 @@ namespace VtubeStudioAdapter.Commands.Auth
         public string? PluginIcon { get; set; }
         public string? AuthToken { get; set; }
 
+        public required Action<VTSData> OnCompleted { get; set; }
+
         public static implicit operator VTSData(AuthQuery model)
         {
             var map = new Mapper(new MapperConfiguration(cfg =>

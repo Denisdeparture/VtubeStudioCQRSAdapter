@@ -13,7 +13,7 @@ namespace VtubeStudioAdapter.Handlers
         public async Task<VTSData> Handle(ArtMeshModelQuery request, CancellationToken cancellationToken)
         {
             logger.LogInformation("Entering {Handler} with request {RequestType}", nameof(GetArtMeshesHandler), typeof(ArtMeshModelQuery).Name);
-            var result = await movementService.GetArtMeshes();
+            var result = await movementService.GetArtMeshes(request);
             logger.LogInformation("Exiting {Handler}", nameof(GetArtMeshesHandler));
             return result;
         }
@@ -24,7 +24,7 @@ namespace VtubeStudioAdapter.Handlers
         public async Task<VTSData> Handle(TrackingParametrsQuery request, CancellationToken cancellationToken)
         {
             logger.LogInformation("Entering {Handler} with request {RequestType}", nameof(GetTrackingParametersHandler), typeof(TrackingParametrsQuery).Name);
-            var result = await movementService.GetTrackingParametrs();
+            var result = await movementService.GetTrackingParametrs(request);
             logger.LogInformation("Exiting {Handler}", nameof(GetTrackingParametersHandler));
             return result;
         }

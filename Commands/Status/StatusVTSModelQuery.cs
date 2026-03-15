@@ -13,20 +13,19 @@ namespace VtubeStudioAdapter.Commands
     {
         public bool Active { get; set; }
 
-        public int Port { get; set; }
+        public string? VTubeStudioVersion { get; set; }
 
-        public string? InstanceID { get; set; }
+        public bool CurrentSessionAuthenticated { get; set; }
 
-        public string? WindowTitle { get; set; }
+        public required Action<VTSData> OnCompleted { get; set; }
 
         public static implicit operator VTSData(StatusVTSModelQuery model)
         {
             var map = new Mapper(new MapperConfiguration(cfg =>
                 cfg.CreateMap<StatusVTSModelQuery, VTSData>()
                     .ForMember((data => data.Active), opt => opt.MapFrom(x => x.Active))
-                    .ForMember((data => data.Port), opt => opt.MapFrom(x => x.Port))
-                    .ForMember((data => data.InstanceID), opt => opt.MapFrom(x => x.InstanceID))
-                    .ForMember((data => data.WindowTitle), opt => opt.MapFrom(x => x.WindowTitle))
+                    .ForMember((data => data.CurrentSessionAuthenticated), opt => opt.MapFrom(x => x.CurrentSessionAuthenticated))
+                    .ForMember((data => data.VTubeStudioVersion), opt => opt.MapFrom(x => x.VTubeStudioVersion))
             ));
             var data = map.Map<StatusVTSModelQuery, VTSData>(model);
             return data;

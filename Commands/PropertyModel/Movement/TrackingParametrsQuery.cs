@@ -15,6 +15,8 @@ namespace VtubeStudioAdapter.Commands.PropertyModel.Movement
         public VTSData.ArtMeshParameter? CustomParametrs { get; set; }
         public VTSData.ArtMeshParameter? DefaultParametrs { get; set; }
 
+        public required Action<VTSData> OnCompleted { get; set; }
+
         public static implicit operator VTSData(TrackingParametrsQuery model)
         {
             var map = new Mapper(new MapperConfiguration(cfg =>

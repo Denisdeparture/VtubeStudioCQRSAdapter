@@ -22,3 +22,4 @@
 /run/media/ashita/D/ReposProjects/VtubeStudioProject/VtubeStudioAdapter/obj/Debug/net9.0/refint/VtubeStudioAdapter.dll
 /run/media/ashita/D/ReposProjects/VtubeStudioProject/VtubeStudioAdapter/obj/Debug/net9.0/VtubeStudioAdapter.pdb
 /run/media/ashita/D/ReposProjects/VtubeStudioProject/VtubeStudioAdapter/obj/Debug/net9.0/ref/VtubeStudioAdapter.dll
+/run/media/ashita/D/ReposProjects/VtubeStudioProject/VtubeStudioAdapter/obj/Debug/net9.0/VtubeStudioAdapter.sourcelink.json

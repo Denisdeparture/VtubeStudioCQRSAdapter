@@ -9,29 +9,37 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using VtubeStudioAdapter.Commands.Auth;
 using VtubeStudioAdapter.Models;
+using VtubeStudioAdapter.Services;
 using WebSocketSharp;
-
 using WebSocket = WebSocketSharp.WebSocket;
 namespace VtubeStudioAdapter
 {
     public class AuthService
     {
 
-        private WebSocket _client;
+        private WebSocketSessionManager _manager;
+
+        private string? _pluginName;
 
         private ILogger _logger;
 
         private Action<VTSData>? _globalAction;
 
-        public AuthService(WebSocket socket, ILogger<AuthService> logger)
+        public AuthService(WebSocketSessionManager manager, ILogger<AuthService> logger)
         {
             _logger = logger;
-            _client = socket;
-            _client.Connect();
-            _client.OnMessage += OnComleted;
+
+            _manager = manager;
+
         }
         public async Task<VTSData> AuthApp(AuthQuery query)
         {
+            var _client = await _manager.TryAddConnection(query.Info!.PluginName!, ConstStorage.vtube_studio_uri);
+
+            _client.OnMessage += OnComleted;
+
+            _pluginName = query.Info.PluginName;
+
             var data = (VTSData)query;
             _logger.LogInformation("Entering {Method}", nameof(AuthApp));
             const string Request = "AuthenticationTokenRequest";
@@ -46,24 +54,29 @@ namespace VtubeStudioAdapter
 
             _client.Send(buffer);
 
-
             _globalAction = query.OnCompleted!;
 
             _logger.LogInformation("Exiting {Method}", nameof(AuthApp));
 
             return data;
         }
-        public async void AuthWithToken(string token, string pluginName, string pluginDeveloper)
+        public async Task<VTSData> AuthWithToken(AuthTokenQuery query)
         {
             _logger.LogInformation("Entering {Method}", nameof(AuthWithToken));
             const string Request = "AuthenticationRequest";
 
-            var data = new VTSData()
+            var client = _manager.GetInfoConnection($"{query.PluginName}");
+
+            if (client is null)
             {
-                AuthToken = token,
-                PluginDeveloper = pluginDeveloper,
-                PluginName = pluginName
-            };
+                _logger.LogError($"[{DateTime.UtcNow}] Error because websoket clinet was null");
+            }
+
+            var data = (VTSData)query;
+
+            _pluginName = query.PluginName;
+
+            client.OnMessage += OnComleted;
 
             var model = VtubeStudioModel.CreateModel(ConstStorage.API_NAME, ConstStorage.VERSION, Request, data);
 
@@ -71,9 +84,13 @@ namespace VtubeStudioAdapter
 
             var buffer = Encoding.UTF8.GetBytes(json);
 
-            _client.Send(buffer);
+            client!.Send(buffer);
+
+            _globalAction = query.OnCompleted!;
 
             _logger.LogInformation("Exiting {Method}", nameof(AuthWithToken));
+
+            return data;
 
         }
 
@@ -85,10 +102,17 @@ namespace VtubeStudioAdapter
             {
                 _logger.LogWarning($"[{DateTime.UtcNow}]: data was null");
             }
+            var client = _manager.GetInfoConnection(_pluginName);
+
+            if (client is null)
+            {
+                _logger.LogError($"[{DateTime.UtcNow}] Error because websoket clinet was null");
+            }
 
             _globalAction(data!);
 
-            _client.OnMessage -= OnComleted;
+            client.OnMessage -= OnComleted;
+
             _globalAction = null;
 
         }

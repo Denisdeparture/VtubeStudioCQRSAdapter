@@ -11,10 +11,7 @@ namespace VtubeStudioAdapter.Commands.Auth
 {
     public class AuthQuery : IRequest<VTSData>
     {
-        public string? PluginName { get; set; }
-
-        public string? PluginDeveloper { get; set; }
-        public string? PluginIcon { get; set; }
+        public Plugin? Info { get; set; }
         public string? AuthToken { get; set; }
 
         public required Action<VTSData> OnCompleted { get; set; }
@@ -23,9 +20,9 @@ namespace VtubeStudioAdapter.Commands.Auth
         {
             var map = new Mapper(new MapperConfiguration(cfg =>
            cfg.CreateMap<AuthQuery, VTSData>()
-           .ForMember((data => data.PluginName), opt => opt.MapFrom(x => x.PluginName))
-           .ForMember((data => data.PluginIcon), opt => opt.MapFrom(x => x.PluginIcon))
-           .ForMember((data => data.PluginDeveloper), opt => opt.MapFrom(x => x.PluginDeveloper))
+           .ForMember((data => data.PluginName), opt => opt.MapFrom(x => x.Info.PluginName))
+           .ForMember((data => data.PluginIcon), opt => opt.MapFrom(x => x.Info.PathToIcon))
+           .ForMember((data => data.PluginDeveloper), opt => opt.MapFrom(x => x.Info.PluginDeveloper))
            .ForMember((data => data.AuthToken), opt => opt.MapFrom(x => x.AuthToken))
            ));
             var data = map.Map<AuthQuery, VTSData>(model);
@@ -34,4 +31,5 @@ namespace VtubeStudioAdapter.Commands.Auth
         }
 
     }
+
 }

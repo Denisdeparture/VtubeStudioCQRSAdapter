@@ -28,4 +28,22 @@ namespace VtubeStudioAdapter.Handlers
             return result;
         }
     }
+    public class AuthTokenHandler : IRequestHandler<AuthTokenQuery, VTSData>
+    {
+        private readonly AuthService _service;
+        private readonly ILogger<AuthHandler> _logger;
+
+        public AuthTokenHandler(AuthService service, ILogger<AuthHandler> logger)
+        {
+            _service = service;
+            _logger = logger;
+        }
+        public async Task<VTSData> Handle(AuthTokenQuery request, CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("Entering {Handler} with request {RequestType}", nameof(AuthHandler), typeof(AuthQuery).Name);
+            var result = await _service.AuthWithToken(request);
+            _logger.LogInformation("Exiting {Handler}", nameof(AuthHandler));
+            return result;
+        }
+    }
 }

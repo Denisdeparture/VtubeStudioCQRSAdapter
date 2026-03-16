@@ -5,58 +5,92 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using VtubeStudioAdapter.Commands.PropertyModel.Movement;
 using VtubeStudioAdapter.Models;
+using VtubeStudioAdapter.Services;
 using WebSocketSharp;
-using WebSocket = WebSocketSharp.WebSocket;
 
 namespace VtubeStudioAdapter.Services
 {
     public class MovementService
     {
-        private readonly WebSocket _client;
+        private readonly WebSocketSessionManager _manager;
+        private string? _pluginName;
         private readonly ILogger _logger;
         private Action<VTSData>? _globalAction;
 
-        public MovementService(WebSocket client, ILogger<MovementService> logger)
+        public MovementService(WebSocketSessionManager manager, ILogger<MovementService> logger)
         {
-            _client = client;
+            _manager = manager;
             _logger = logger;
         }
 
         public async Task<VTSData> GetArtMeshes(ArtMeshModelQuery query)
         {
-            _client.OnMessage += OnCompleted;
+            if (string.IsNullOrWhiteSpace(query.PluginName))
+            {
+                _logger.LogError("PluginName was null or empty in {Query}", nameof(ArtMeshModelQuery));
+                return new VTSData();
+            }
+
+            var client = _manager.GetInfoConnection(query.PluginName);
+
+            if (client is null)
+            {
+                _logger.LogError("WebSocket client for plugin {Plugin} was null", query.PluginName);
+                return new VTSData();
+            }
+
+            client.OnMessage += OnCompleted;
 
             _logger.LogInformation("Entering {Method}", nameof(GetArtMeshes));
             const string Request = "ArtMeshListRequest";
 
-            await SendRequest(Request, new VTSData());
+            _pluginName = query.PluginName;
+            var data = (VTSData)query;
+            await SendRequest(client, Request, data);
             _globalAction = query.OnCompleted;
 
             _logger.LogInformation("Exiting {Method}", nameof(GetArtMeshes));
-            return new VTSData();
+            return data;
 
         }
 
         public async Task<VTSData> GetTrackingParametrs(TrackingParametrsQuery query)
         {
-            _client.OnMessage += OnCompleted;
+            if (string.IsNullOrWhiteSpace(query.PluginName))
+            {
+                _logger.LogError("PluginName was null or empty in {Query}", nameof(TrackingParametrsQuery));
+                return new VTSData();
+            }
+
+            var client = _manager.GetInfoConnection(query.PluginName);
+
+            if (client is null)
+            {
+                _logger.LogError("WebSocket client for plugin {Plugin} was null", query.PluginName);
+                return new VTSData();
+            }
+
+            client.OnMessage += OnCompleted;
 
             _logger.LogInformation("Entering {Method}", nameof(GetTrackingParametrs));
             const string Request = "InputParameterListRequest";
 
-            await SendRequest(Request, new VTSData());
+            _pluginName = query.PluginName;
+            var data = (VTSData)query;
+            await SendRequest(client, Request, data);
             _globalAction = query.OnCompleted;
 
             _logger.LogInformation("Exiting {Method}", nameof(GetTrackingParametrs));
-            return new VTSData();
+            return data;
 
         }
 
-        public async Task ChangeValueParametrs(params VTSData.Parametr[] parametr)
+        public async Task ChangeValueParametrs(string pluginName, params VTSData.Parametr[] parametr)
         {
             _logger.LogInformation("Entering {Method} with {Count} parameters", nameof(ChangeValueParametrs), parametr?.Length ?? 0);
             const string Request = "InjectParameterDataRequest";
 
+            _pluginName = pluginName;
             var data = new VTSData()
             {
                 ParameterValues = parametr
@@ -65,11 +99,28 @@ namespace VtubeStudioAdapter.Services
             var json = JsonConvert.SerializeObject(model, ConstStorage.SETTINGS);
             var buffer = Encoding.UTF8.GetBytes(json);
 
-            _client.Send(buffer);
+            if (string.IsNullOrWhiteSpace(pluginName))
+            {
+                _logger.LogError("PluginName was null or empty for ChangeValueParametrs");
+                return;
+            }
+
+            var client = _manager.GetInfoConnection(pluginName);
+
+            if (client is null)
+            {
+                _logger.LogError("WebSocket client for plugin {Plugin} was null", pluginName);
+                return;
+            }
+
+            client.Send(buffer);
+
+            client.OnMessage += OnCompleted;
+
             _logger.LogInformation("Exiting {Method}", nameof(ChangeValueParametrs));
         }
 
-        private async Task SendRequest(string messageType, VTSData data)
+        private async Task SendRequest(WebSocketSharp.WebSocket client, string messageType, VTSData data)
         {
             _logger.LogInformation("Sending movement request {MessageType}", messageType);
             var model = VtubeStudioModel.CreateModel(ConstStorage.API_NAME, ConstStorage.VERSION, messageType, data);
@@ -80,7 +131,7 @@ namespace VtubeStudioAdapter.Services
 
             var buffer = Encoding.UTF8.GetBytes(json);
 
-            _client.Send(buffer);
+            client.Send(buffer);
         }
 
         private async void OnCompleted(object? sender, MessageEventArgs e)
@@ -102,9 +153,19 @@ namespace VtubeStudioAdapter.Services
                     _logger.LogWarning($"[{DateTime.UtcNow}]: VTube Studio API movement error: {obj.Data.ErrorID} {obj.Data.Message}");
                 }
 
-                _globalAction(obj.Data);
-                _client.OnMessage -= OnCompleted;
+                if (_globalAction is not null)
+                {
+                    _globalAction?.Invoke(obj.Data);
+                }
+
+                if (!string.IsNullOrWhiteSpace(_pluginName))
+                {
+                    var client = _manager.GetInfoConnection(_pluginName);
+                    client!.OnMessage -= OnCompleted;
+                }
+
                 _globalAction = null;
+                _pluginName = null;
             }
             catch (Exception ex)
             {

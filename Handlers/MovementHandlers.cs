@@ -36,7 +36,7 @@ namespace VtubeStudioAdapter.Handlers
         {
             logger.LogInformation("Entering {Handler} with request {RequestType}", nameof(ChangeParametersHandler), typeof(ChangeParametrsModelCommand).Name);
             var values = request.ParameterValues ?? System.Array.Empty<VTSData.Parametr>();
-            await movementService.ChangeValueParametrs(values);
+            await movementService.ChangeValueParametrs(request.PluginName, values);
             logger.LogInformation("Exiting {Handler}", nameof(ChangeParametersHandler));
             return request;
         }

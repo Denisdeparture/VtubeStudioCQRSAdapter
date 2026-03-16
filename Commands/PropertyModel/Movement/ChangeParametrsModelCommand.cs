@@ -14,6 +14,7 @@ namespace VtubeStudioAdapter.Commands.PropertyModel.Movement
     {
         public VTSData.Parametr[]? ParameterValues;
         public bool FaceFound { get; set; }
+        public required string PluginName { get; set; }
         public ModeModel Mode { get; set; }
 
         public static implicit operator VTSData(ChangeParametrsModelCommand model)

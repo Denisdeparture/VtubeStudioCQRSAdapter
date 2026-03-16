@@ -11,6 +11,8 @@ namespace VtubeStudioAdapter.Commands
 {
     public class StatusVTSModelQuery : IRequest<VTSData>
     {
+        public required string? PluginName { get; set; }
+
         public bool Active { get; set; }
 
         public string? VTubeStudioVersion { get; set; }
@@ -23,6 +25,7 @@ namespace VtubeStudioAdapter.Commands
         {
             var map = new Mapper(new MapperConfiguration(cfg =>
                 cfg.CreateMap<StatusVTSModelQuery, VTSData>()
+                    .ForMember((data => data.PluginName), opt => opt.MapFrom(x => x.PluginName))
                     .ForMember((data => data.Active), opt => opt.MapFrom(x => x.Active))
                     .ForMember((data => data.CurrentSessionAuthenticated), opt => opt.MapFrom(x => x.CurrentSessionAuthenticated))
                     .ForMember((data => data.VTubeStudioVersion), opt => opt.MapFrom(x => x.VTubeStudioVersion))

@@ -5,45 +5,62 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using VtubeStudioAdapter.Commands;
 using VtubeStudioAdapter.Models;
+using VtubeStudioAdapter.Services;
 using WebSocketSharp;
-using WebSocket = WebSocketSharp.WebSocket;
 
 namespace VtubeStudioAdapter.Services
 {
     public class StatusService
     {
-        private readonly WebSocket _client;
+        private readonly WebSocketSessionManager _manager;
+        private string? _pluginName;
         private readonly ILogger _logger;
         private Action<VTSData>? _globalAction;
 
-        public StatusService(WebSocket client, ILogger<StatusService> logger)
+        public StatusService(WebSocketSessionManager manager, ILogger<StatusService> logger)
         {
-            _client = client;
+            _manager = manager;
             _logger = logger;
         }
 
         public async Task<VTSData> GetCurrentStatus(StatusVTSModelQuery query)
         {
-            _client.OnMessage += OnCompleted;
+            if (string.IsNullOrWhiteSpace(query.PluginName))
+            {
+                _logger.LogError("PluginName was null or empty in {Query}", nameof(StatusVTSModelQuery));
+                return new VTSData();
+            }
+
+            var client = _manager.GetInfoConnection(query.PluginName);
+
+            if (client is null)
+            {
+                _logger.LogError("WebSocket client for plugin {Plugin} was null", query.PluginName);
+                return new VTSData();
+            }
+
+            client.OnMessage += OnCompleted;
 
             _logger.LogInformation("Entering {Method}", nameof(GetCurrentStatus));
             const string Request = "APIStateRequest";
 
-            await SendRequest(Request, new VTSData());
+            _pluginName = query.PluginName;
+            var data = (VTSData)query;
+            await SendRequest(client, Request, data);
             _globalAction = query.OnCompleted;
 
             _logger.LogInformation("Exiting {Method}", nameof(GetCurrentStatus));
-            return new VTSData();
+            return data;
         }
 
-        private async Task SendRequest(string messageType, VTSData data)
+        private async Task SendRequest(WebSocketSharp.WebSocket client, string messageType, VTSData data)
         {
             _logger.LogDebug("Sending status request {MessageType}", messageType);
             var model = VtubeStudioModel.CreateModel(ConstStorage.API_NAME, ConstStorage.VERSION, messageType, data);
             var json = JsonConvert.SerializeObject(model, ConstStorage.SETTINGS);
             var buffer = Encoding.UTF8.GetBytes(json);
 
-            _client.Send(buffer);
+            client.Send(buffer);
         }
 
         private async void OnCompleted(object? sender, MessageEventArgs e)
@@ -65,11 +82,16 @@ namespace VtubeStudioAdapter.Services
                 }
 
                 _logger.LogDebug("Status response received successfully.");
-                _globalAction(obj.Data);
-                _client.OnMessage -= OnCompleted;
+                _globalAction?.Invoke(obj.Data);
+
+                if (!string.IsNullOrWhiteSpace(_pluginName))
+                {
+                    var client = _manager.GetInfoConnection(_pluginName);
+                    client!.OnMessage -= OnCompleted;
+                }
+
                 _globalAction = null;
-
-
+                _pluginName = null;
             }
             catch (Exception ex)
             {

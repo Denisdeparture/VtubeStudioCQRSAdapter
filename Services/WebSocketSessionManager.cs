@@ -73,6 +73,7 @@ namespace VtubeStudioAdapter.Services
 
             var task = mediator.Send(new StatusVTSModelQuery()
             {
+                PluginName = pluginName,
                 OnCompleted = (data) =>
                 {
                     isAuth = data.CurrentSessionAuthenticated;

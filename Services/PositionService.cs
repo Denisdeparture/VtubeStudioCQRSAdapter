@@ -6,30 +6,45 @@ using Newtonsoft.Json;
 using VtubeStudioAdapter.Commands.Position;
 using VtubeStudioAdapter.Сommands.Position;
 using VtubeStudioAdapter.Models;
+using VtubeStudioAdapter.Services;
 using WebSocketSharp;
-using WebSocket = WebSocketSharp.WebSocket;
 
 namespace VtubeStudioAdapter.Services
 {
     public class PositionService
     {
-        private readonly WebSocket _client;
+        private readonly WebSocketSessionManager _manager;
+        private string? _pluginName;
         private readonly ILogger _logger;
         private Action<VTSData>? _globalAction;
 
-        public PositionService(WebSocket client, ILogger<PositionService> logger)
+        public PositionService(WebSocketSessionManager manager, ILogger<PositionService> logger)
         {
-            _client = client;
+            _manager = manager;
             _logger = logger;
         }
 
         public async Task<VTSData> ChangePosition(ChangeModelPositionCommand data)
         {
+            if (string.IsNullOrWhiteSpace(data.PluginName))
+            {
+                _logger.LogError("PluginName was null or empty in {Command}", nameof(ChangeModelPositionCommand));
+                return new VTSData();
+            }
+
+            var client = _manager.GetInfoConnection(data.PluginName);
+
+            if (client is null)
+            {
+                _logger.LogError("WebSocket client for plugin {Plugin} was null", data.PluginName);
+                return new VTSData();
+            }
 
             _logger.LogInformation("Entering {Method}", nameof(ChangePosition));
             const string Request = "MoveModelRequest";
 
-            await SendRequest(Request, data);
+            var vtsData = (VTSData)data;
+            await SendRequest(client, Request, vtsData);
 
             _logger.LogInformation("Exiting {Method}", nameof(ChangePosition));
 
@@ -39,19 +54,35 @@ namespace VtubeStudioAdapter.Services
 
         public async Task<VTSData> GetCurrentModelData(GetCurrentModelQuery query)
         {
-            _client.OnMessage += OnCompleted;
+            if (string.IsNullOrWhiteSpace(query.PluginName))
+            {
+                _logger.LogError("PluginName was null or empty in {Query}", nameof(GetCurrentModelQuery));
+                return new VTSData();
+            }
+
+            var client = _manager.GetInfoConnection(query.PluginName);
+
+            if (client is null)
+            {
+                _logger.LogError("WebSocket client for plugin {Plugin} was null", query.PluginName);
+                return new VTSData();
+            }
+
+            client.OnMessage += OnCompleted;
 
             _logger.LogInformation("Entering {Method}", nameof(GetCurrentModelData));
             const string Request = "CurrentModelRequest";
 
-            await SendRequest(Request, new VTSData());
+            _pluginName = query.PluginName;
+            var data = (VTSData)query;
+            await SendRequest(client, Request, data);
             _globalAction = query.OnCompleted;
 
             _logger.LogInformation("Exiting {Method}", nameof(GetCurrentModelData));
-            return new VTSData();
+            return data;
         }
 
-        private async Task SendRequest(string messageType, VTSData data)
+        private async Task SendRequest(WebSocketSharp.WebSocket client, string messageType, VTSData data)
         {
 
             _logger.LogDebug("Sending position request {MessageType}", messageType);
@@ -63,7 +94,7 @@ namespace VtubeStudioAdapter.Services
 
             var buffer = Encoding.UTF8.GetBytes(json);
 
-            _client.Send(buffer);
+            client.Send(buffer);
         }
 
         private async void OnCompleted(object? sender, MessageEventArgs e)
@@ -85,10 +116,15 @@ namespace VtubeStudioAdapter.Services
                 }
 
                 _globalAction?.Invoke(obj.Data);
-                _client.OnMessage -= OnCompleted;
+
+                if (!string.IsNullOrWhiteSpace(_pluginName))
+                {
+                    var client = _manager.GetInfoConnection(_pluginName);
+                    client!.OnMessage -= OnCompleted;
+                }
+
                 _globalAction = null;
-
-
+                _pluginName = null;
             }
             catch (Exception ex)
             {

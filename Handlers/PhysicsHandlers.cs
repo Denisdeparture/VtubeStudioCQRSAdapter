@@ -25,7 +25,7 @@ namespace VtubeStudioAdapter.Handlers
         public async Task<VTSData> Handle(ChangePhysicsParametrs request, CancellationToken cancellationToken)
         {
             logger.LogInformation("Entering {Handler} with request {RequestType}", nameof(ChangePhysicsHandler), typeof(ChangePhysicsParametrs).Name);
-            await physicsService.ChangePhysicParametr(request.Wind, request.Strength);
+            await physicsService.ChangePhysicParametr(request);
             logger.LogInformation("Exiting {Handler}", nameof(ChangePhysicsHandler));
             return request;
         }

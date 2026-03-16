@@ -5,64 +5,90 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using VtubeStudioAdapter.Commands.PropertyModel.Physics;
 using VtubeStudioAdapter.Models;
+using VtubeStudioAdapter.Models.PropertyModel.Physics;
+using VtubeStudioAdapter.Services;
 using WebSocketSharp;
-using WebSocket = WebSocketSharp.WebSocket;
 
 namespace VtubeStudioAdapter.Services
 {
     public class PhysicsService
     {
-        private readonly WebSocket _client;
+        private readonly WebSocketSessionManager _manager;
+        private string? _pluginName;
         private readonly ILogger _logger;
         private Action<VTSData>? _globalAction;
 
-        public PhysicsService(WebSocket client, ILogger<PhysicsService> logger)
+        public PhysicsService(WebSocketSessionManager manager, ILogger<PhysicsService> logger)
         {
-            _client = client;
+            _manager = manager;
             _logger = logger;
         }
 
-        public async Task ChangePhysicParametr(
-        VTSData.PhysicParamter[] windParamters,
-        VTSData.PhysicParamter[] strengthParamters)
+        public async Task ChangePhysicParametr(ChangePhysicsParametrs request)
         {
-            _logger.LogInformation("Entering {Method} with wind={WindCount}, strength={StrengthCount}", nameof(ChangePhysicParametr), windParamters?.Length ?? 0, strengthParamters?.Length ?? 0);
+            _logger.LogInformation("Entering {Method} with wind={WindCount}, strength={StrengthCount}", nameof(ChangePhysicParametr), request.Wind?.Length ?? 0, request.Strength?.Length ?? 0);
             const string Request = "SetCurrentModelPhysicsRequest";
 
-            var data = new VTSData()
+            if (string.IsNullOrWhiteSpace(request.PluginName))
             {
-                Wind = windParamters,
-                Strength = strengthParamters
-            };
+                _logger.LogError("PluginName was null or empty in {Request}", nameof(ChangePhysicsParametrs));
+                return;
+            }
+
+            var client = _manager.GetInfoConnection(request.PluginName);
+
+            if (client is null)
+            {
+                _logger.LogError("WebSocket client for plugin {Plugin} was null", request.PluginName);
+                return;
+            }
+
+            var data = (VTSData)request;
             var model = VtubeStudioModel.CreateModel(ConstStorage.API_NAME, ConstStorage.VERSION, Request, data);
             var json = JsonConvert.SerializeObject(model, ConstStorage.SETTINGS);
             var buffer = Encoding.UTF8.GetBytes(json);
 
-            _client.Send(buffer);
+            client.Send(buffer);
             _logger.LogInformation("Exiting {Method}", nameof(ChangePhysicParametr));
         }
 
         public async Task<VTSData> GetPhysicsParametrs(GetPhysicsQuery query)
         {
-            _client.OnMessage += OnCompleted;
+            if (string.IsNullOrWhiteSpace(query.PluginName))
+            {
+                _logger.LogError("PluginName was null or empty in {Query}", nameof(GetPhysicsQuery));
+                return new VTSData();
+            }
+
+            var client = _manager.GetInfoConnection(query.PluginName);
+
+            if (client is null)
+            {
+                _logger.LogError("WebSocket client for plugin {Plugin} was null", query.PluginName);
+                return new VTSData();
+            }
+
+            client.OnMessage += OnCompleted;
 
             _logger.LogInformation("Entering {Method}", nameof(GetPhysicsParametrs));
             const string Request = "GetCurrentModelPhysicsRequest";
-            await SendRequest(Request, new VTSData());
+            _pluginName = query.PluginName;
+            var data = (VTSData)query;
+            await SendRequest(client, Request, data);
             _globalAction = query.OnCompleted;
 
             _logger.LogInformation("Exiting {Method}", nameof(GetPhysicsParametrs));
-            return new VTSData();
+            return data;
         }
 
-        private async Task SendRequest(string messageType, VTSData data)
+        private async Task SendRequest(WebSocketSharp.WebSocket client, string messageType, VTSData data)
         {
             _logger.LogDebug("Sending physics request {MessageType}", messageType);
             var model = VtubeStudioModel.CreateModel(ConstStorage.API_NAME, ConstStorage.VERSION, messageType, data);
             var json = JsonConvert.SerializeObject(model, ConstStorage.SETTINGS);
             var buffer = Encoding.UTF8.GetBytes(json);
 
-            _client.Send(buffer);
+            client.Send(buffer);
         }
 
         private async void OnCompleted(object? sender, MessageEventArgs e)
@@ -84,10 +110,15 @@ namespace VtubeStudioAdapter.Services
                 }
 
                 _globalAction?.Invoke(obj.Data);
-                _client.OnMessage -= OnCompleted;
+
+                if (!string.IsNullOrWhiteSpace(_pluginName))
+                {
+                    var client = _manager.GetInfoConnection(_pluginName);
+                    client!.OnMessage -= OnCompleted;
+                }
+
                 _globalAction = null;
-
-
+                _pluginName = null;
             }
             catch (Exception ex)
             {

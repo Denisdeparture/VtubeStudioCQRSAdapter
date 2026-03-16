@@ -13,6 +13,8 @@ namespace VtubeStudioAdapter.Commands.PropertyModel.Physics
 {
     public class GetPhysicsQuery : IRequest<VTSData>
     {
+        public required string? PluginName { get; set; }
+
         public bool ModelHasPhysics { get; set; }
 
         public bool PhysicsSwitchedOn { get; set; }
@@ -36,6 +38,7 @@ namespace VtubeStudioAdapter.Commands.PropertyModel.Physics
         {
             var map = new Mapper(new MapperConfiguration(cfg =>
                 cfg.CreateMap<GetPhysicsQuery, VTSData>()
+                    .ForMember((data => data.PluginName), opt => opt.MapFrom(x => x.PluginName))
                     .ForMember((data => data.ModelHasPhysics), opt => opt.MapFrom(x => x.ModelHasPhysics))
                     .ForMember((data => data.PhysicsSwitchedOn), opt => opt.MapFrom(x => x.PhysicsSwitchedOn))
                     .ForMember((data => data.UsingLegacyPhysics), opt => opt.MapFrom(x => x.UsingLegacyPhysics))

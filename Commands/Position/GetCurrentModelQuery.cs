@@ -7,6 +7,8 @@ namespace VtubeStudioAdapter.Сommands.Position;
 
 public class GetCurrentModelQuery : IRequest<VTSData>
 {
+    public string? PluginName { get; set; }
+
     public string? VtsModelName { get; set; }
 
     public string? VtsModelIconName { get; set; }
@@ -40,6 +42,7 @@ public class GetCurrentModelQuery : IRequest<VTSData>
     {
         var map = new Mapper(new MapperConfiguration(cfg =>
             cfg.CreateMap<GetCurrentModelQuery, VTSData>()
+                .ForMember((data => data.PluginName), opt => opt.MapFrom(x => x.PluginName))
                 .ForMember((data => data.VtsModelName), opt => opt.MapFrom(x => x.VtsModelName))
                 .ForMember((data => data.VtsModelIconName), opt => opt.MapFrom(x => x.VtsModelIconName))
                 .ForMember((data => data.Live2DModelName), opt => opt.MapFrom(x => x.Live2DModelName))

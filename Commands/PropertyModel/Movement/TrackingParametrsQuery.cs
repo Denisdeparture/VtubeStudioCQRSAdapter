@@ -12,6 +12,8 @@ namespace VtubeStudioAdapter.Commands.PropertyModel.Movement
 {
     public class TrackingParametrsQuery : IRequest<VTSData>
     {
+        public required string? PluginName { get; set; }
+
         public VTSData.ArtMeshParameter? CustomParametrs { get; set; }
         public VTSData.ArtMeshParameter? DefaultParametrs { get; set; }
 
@@ -21,6 +23,7 @@ namespace VtubeStudioAdapter.Commands.PropertyModel.Movement
         {
             var map = new Mapper(new MapperConfiguration(cfg =>
                 cfg.CreateMap<TrackingParametrsQuery, VTSData>()
+                    .ForMember((data => data.PluginName), opt => opt.MapFrom(x => x.PluginName))
                     .ForMember((data => data.CustomParametrs), opt => opt.MapFrom(x => x.CustomParametrs))
                     .ForMember((data => data.DefaultParametrs), opt => opt.MapFrom(x => x.DefaultParametrs))
             ));

@@ -41,8 +41,14 @@ namespace VtubeStudioAdapter.Handlers
         public async Task<VTSData> Handle(AuthTokenQuery request, CancellationToken cancellationToken)
         {
             _logger.LogInformation("Entering {Handler} with request {RequestType}", nameof(AuthHandler), typeof(AuthQuery).Name);
-            var result = await _service.AuthWithToken(request);
+            var task = _service.AuthWithToken(request);
+
+            task.Wait();
+
+            var result = task.Result;
+
             _logger.LogInformation("Exiting {Handler}", nameof(AuthHandler));
+
             return result;
         }
     }

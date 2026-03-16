@@ -11,6 +11,8 @@ namespace VtubeStudioAdapter.Commands.PropertyModel.Movement
 {
     public class ArtMeshModelQuery : IRequest<VTSData>
     {
+        public required string? PluginName { get; set; }
+
         public bool ModelLoaded { get; set; }
 
         public int NumberOfArtMeshNames { get; set; }
@@ -27,6 +29,7 @@ namespace VtubeStudioAdapter.Commands.PropertyModel.Movement
         {
             var map = new Mapper(new MapperConfiguration(cfg =>
                 cfg.CreateMap<ArtMeshModelQuery, VTSData>()
+                    .ForMember((data => data.PluginName), opt => opt.MapFrom(x => x.PluginName))
                     .ForMember((data => data.ModelLoaded), opt => opt.MapFrom(x => x.ModelLoaded))
                     .ForMember((data => data.NumberOfArtMeshNames), opt => opt.MapFrom(x => x.NumberOfArtMeshNames))
                     .ForMember((data => data.NumberOfArtMeshTags), opt => opt.MapFrom(x => x.NumberOfArtMeshTags))

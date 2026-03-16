@@ -11,6 +11,8 @@ namespace VtubeStudioAdapter.Models.PropertyModel.Physics
 {
     public class ChangePhysicsParametrs : IRequest<VTSData>
     {
+        public required string? PluginName { get; set; }
+
         public PhysicParamter[]? Strength { get; set; }
         public PhysicParamter[]? Wind { get; set; }
 
@@ -18,6 +20,7 @@ namespace VtubeStudioAdapter.Models.PropertyModel.Physics
         {
             var map = new Mapper(new MapperConfiguration(cfg =>
                 cfg.CreateMap<ChangePhysicsParametrs, VTSData>()
+                    .ForMember((data => data.PluginName), opt => opt.MapFrom(x => x.PluginName))
                     .ForMember((data => data.Strength), opt => opt.MapFrom(x => x.Strength))
                     .ForMember((data => data.Wind), opt => opt.MapFrom(x => x.Wind))
             ));
